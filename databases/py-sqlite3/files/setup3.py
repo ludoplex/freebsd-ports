@@ -16,8 +16,8 @@ except:
 install.sub_commands = [x for x in install.sub_commands if 'egg' not in x[0]]
 
 prefix = sysconfig.PREFIX
-inc_dirs = [prefix + "/include", "Modules/_sqlite"]
-lib_dirs = [prefix + "/lib"]
+inc_dirs = [f"{prefix}/include", "Modules/_sqlite"]
+lib_dirs = [f"{prefix}/lib"]
 libs = ["sqlite3"]
 macros = [('MODULE_NAME', '"sqlite3"')]
 sqlite_srcs = [

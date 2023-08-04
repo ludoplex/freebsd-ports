@@ -69,11 +69,11 @@ class GetPatch(object):
 
     def write(self, filename, data):
         if filename.endswith(('.patch', '.txt')):
-            filename = "{}.diff".format(filename[:filename.rindex('.')])
+            filename = f"{filename[:filename.rindex('.')]}.diff"
         f = codecs.open(filename, encoding=self.default_locale, mode='w')
         f.write(data.decode(self.default_locale))
         f.close()
-        self.out("[+] {} created".format(filename))
+        self.out(f"[+] {filename} created")
 
     def get(self, only_last=False, output_stdout=False):
         self.output_stdout = output_stdout
@@ -88,13 +88,13 @@ class GetPatch(object):
 
         for patch in self.patchs:
             url = patch['url']
-            p = patch['name']
-
             data = urllib2.urlopen(url, context=self.ssl_context).read()
 
             if self.output_stdout:
                 sys.stdout.write(data.decode(self.default_locale))
             else:
+                p = patch['name']
+
                 self.write(p, data)
 
     def add_patch(self, url, name):
@@ -116,12 +116,10 @@ class GnatsGetPatch(GetPatch):
 
     def fetch(self, *largs, **kwargs):
         category = kwargs['category']
-        target = ("{}/{}".format(category, self.pr),
-                  "{}".format(self.pr))[category == '']
-        self.out("[+] Fetching patch for pr {}".format(target))
+        target = f"{category}/{self.pr}", f"{self.pr}"[category == '']
+        self.out(f"[+] Fetching patch for pr {target}")
         pattern = re.compile(self.REGEX)
-        u = urllib2.urlopen("{}{}".format(self.URL, target),
-                            context=self.ssl_context)
+        u = urllib2.urlopen(f"{self.URL}{target}", context=self.ssl_context)
         data = u.read()
         if data is None:
             self.out("[-] No patch found")
@@ -146,17 +144,15 @@ class BzGetPatch(GetPatch):
     def _get_patch_name(self, url):
         data = urllib2.urlopen(url, context=self.ssl_context).read()
         match = re.search(self.REGEX, str(data))
-        if match is None:
-            return None
-        return match.group(1)
+        return None if match is None else match[1]
 
     def _get_patch_url(self, data):
         for url in re.findall(self.REGEX_URL, str(data)):
-            url = '{}{}'.format(self.URL_BASE, url)
+            url = f'{self.URL_BASE}{url}'
             file_name = self._get_patch_name(url)
             if file_name is None:
                 msg = "[-] Could not determine the patch file name in {}." \
-                    "Skipping."
+                        "Skipping."
                 self.out(msg.format(url))
                 continue
             download_url = url[:url.find('&')]
@@ -167,7 +163,7 @@ class BzGetPatch(GetPatch):
         match = re.search(self.REGEX_ATTACHMENTS_TABLE, str(data), re.DOTALL)
         if match is None:
             return patch_urls
-        table = match.group(1)
+        table = match[1]
         for tr in re.findall(self.REGEX_ATTACHMENT_TR, str(data), re.DOTALL):
             if (tr.find('bz_tr_obsolete') >= 0):
                 continue
@@ -178,11 +174,9 @@ class BzGetPatch(GetPatch):
 
     def fetch(self, *largs, **kwargs):
         category = kwargs['category']
-        target = ("{}/{}".format(category, self.pr),
-                  "{}".format(self.pr))[category == '']
-        self.out("[+] Fetching patch for pr {}".format(target))
-        u = urllib2.urlopen("{}{}".format(self.URL_SHOW, self.pr),
-                            context=self.ssl_context)
+        target = f"{category}/{self.pr}", f"{self.pr}"[category == '']
+        self.out(f"[+] Fetching patch for pr {target}")
+        u = urllib2.urlopen(f"{self.URL_SHOW}{self.pr}", context=self.ssl_context)
         data = u.read()
 
         if data is None:
@@ -224,7 +218,7 @@ def main():
     if pr and '/' in pr:
         category, pr = pr.split('/')
 
-    Clazz = globals()['%sGetPatch' % args.mode.capitalize()]
+    Clazz = globals()[f'{args.mode.capitalize()}GetPatch']
     gp = Clazz(pr, category)
     gp.get(only_last=args.last, output_stdout=args.stdout)
 

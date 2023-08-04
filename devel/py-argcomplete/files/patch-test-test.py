@@ -3,12 +3,12 @@
 @@ -1247,11 +1247,11 @@ class TestBashGlobal(TestBash):
  
      def test_python_completion(self):
-         self.sh.run_command("cd " + TEST_DIR)
+          self.sh.run_command(f"cd {TEST_DIR}")
 -        self.assertEqual(self.sh.run_command("python3 ./prog basic f\t"), "foo\r\n")
 +        self.assertEqual(self.sh.run_command("%%PYTHON_CMD%% ./prog basic f\t"), "foo\r\n")
  
      def test_python_filename_completion(self):
-         self.sh.run_command("cd " + TEST_DIR)
+          self.sh.run_command(f"cd {TEST_DIR}")
 -        self.assertEqual(self.sh.run_command("python3 ./pro\tbasic f\t"), "foo\r\n")
 +        self.assertEqual(self.sh.run_command("%%PYTHON_CMD%% ./pro\tbasic f\t"), "foo\r\n")
  

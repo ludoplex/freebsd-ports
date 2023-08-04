@@ -24,21 +24,13 @@ except ImportError:
 
 import sys
 
-if len(sys.argv) > 1:
-    infn = sys.argv[1]
-else:
-    infn = "service-types"
-
-if len(sys.argv) > 2:
-    outfn = sys.argv[2]
-else:
-    outfn = infn + ".db"
-
+infn = sys.argv[1] if len(sys.argv) > 1 else "service-types"
+outfn = sys.argv[2] if len(sys.argv) > 2 else f"{infn}.db"
 db = dbm.open(outfn, "n")
 
 for ln in open(infn, "r"):
     ln = ln.strip(" \r\n\t")
-    
+
     if ln == "" or ln.startswith("#"):
         continue
 

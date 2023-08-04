@@ -25,71 +25,65 @@ import struct
 
 
 def parse(filename):
-	f = open(filename, 'rb')
-	if f.read(2) != b'MZ':
-		raise Exception("MZ signature not found.")
+	with open(filename, 'rb') as f:
+		if f.read(2) != b'MZ':
+			raise Exception("MZ signature not found.")
 
-	sections = []
-	# long e_lfanew
-	f.seek(0x3c)
-	pe_ptr = struct.unpack("<L", f.read(4))[0]
-	f.seek(pe_ptr)
-	if f.read(4) != b'\x50\x45\x00\x00':
-		raise Exception("PE signature not found.")
-	# skip Machine
-	f.seek(f.tell() + 2)
-	sections.append(['header', 324, 0])
-	num_sections = struct.unpack("<H", f.read(2))[0]
-	# skip TimeDateStamp
-	f.seek(f.tell() + 4)
-	symboltable_address = struct.unpack("<L", f.read(4))[0]
-	num_symbols = struct.unpack("<L", f.read(4))[0]
-	optheader_size = struct.unpack("<H", f.read(2))[0]
-	# skip past PE header and PE optional header
-	f.seek(f.tell() + 2 + optheader_size)
-
-	for i in range(num_sections):
-		name = f.read(8).decode('ascii', errors='ignore').strip('\x00')
-		# skip past Misc and VirtualAddress
-		f.seek(f.tell() + 8)
-		# SizeOfRawData
-		size = struct.unpack("<L", f.read(4))[0]
-		# PointerToRawData
-		ptr = struct.unpack("<L", f.read(4))[0]
-		# skip to next section header
-		f.seek(f.tell() + 16)
-		sections.append([name, size, ptr])
-
-	symbols = []
-	addr = symboltable_address
-	stringtable_address = symboltable_address + num_symbols * 18
-	for i in range(num_symbols):
-		f.seek(addr)
-		tmp = f.read(8)
-		symaddr = struct.unpack("<L", f.read(4))[0]
-		# skip SectionNumber and Type
-		symtype = struct.unpack("B", f.read(1))[0]
+		# long e_lfanew
+		f.seek(0x3c)
+		pe_ptr = struct.unpack("<L", f.read(4))[0]
+		f.seek(pe_ptr)
+		if f.read(4) != b'\x50\x45\x00\x00':
+			raise Exception("PE signature not found.")
+		# skip Machine
+		f.seek(f.tell() + 2)
+		sections = [['header', 324, 0]]
+		num_sections = struct.unpack("<H", f.read(2))[0]
+		# skip TimeDateStamp
 		f.seek(f.tell() + 4)
-		if tmp[:4] == b'\x00\x00\x00\x00':
-			# symbol name is in the string table
-			straddr = stringtable_address + struct.unpack("<l", tmp[4:])[0]
-			f.seek(straddr)
-			tmpname = f.read(64)
-			name = tmpname[:tmpname.find(b'\x00')]
-		else:
-			name = tmp
-		name = name.decode('ascii', errors='ignore').strip('\x00')
-		# need IMAGE_SYM_CLASS_EXTERNAL
-		if symtype == 0x02:
-			size = 0
-		else:
-			size = None
-		if i != 0 and symbols[-1][2] is not None and symaddr > symbols[-1][1]:
-			symbols[-1][2] = symaddr - symbols[-1][1]
-		symbols.append([name, symaddr, size])
-		addr += 18
+		symboltable_address = struct.unpack("<L", f.read(4))[0]
+		num_symbols = struct.unpack("<L", f.read(4))[0]
+		optheader_size = struct.unpack("<H", f.read(2))[0]
+		# skip past PE header and PE optional header
+		f.seek(f.tell() + 2 + optheader_size)
 
-	f.close()
+		for _ in range(num_sections):
+			name = f.read(8).decode('ascii', errors='ignore').strip('\x00')
+			# skip past Misc and VirtualAddress
+			f.seek(f.tell() + 8)
+			# SizeOfRawData
+			size = struct.unpack("<L", f.read(4))[0]
+			# PointerToRawData
+			ptr = struct.unpack("<L", f.read(4))[0]
+			# skip to next section header
+			f.seek(f.tell() + 16)
+			sections.append([name, size, ptr])
+
+		symbols = []
+		addr = symboltable_address
+		stringtable_address = symboltable_address + num_symbols * 18
+		for i in range(num_symbols):
+			f.seek(addr)
+			tmp = f.read(8)
+			symaddr = struct.unpack("<L", f.read(4))[0]
+			# skip SectionNumber and Type
+			symtype = struct.unpack("B", f.read(1))[0]
+			f.seek(f.tell() + 4)
+			if tmp[:4] == b'\x00\x00\x00\x00':
+				# symbol name is in the string table
+				straddr = stringtable_address + struct.unpack("<l", tmp[4:])[0]
+				f.seek(straddr)
+				tmpname = f.read(64)
+				name = tmpname[:tmpname.find(b'\x00')]
+			else:
+				name = tmp
+			name = name.decode('ascii', errors='ignore').strip('\x00')
+					# need IMAGE_SYM_CLASS_EXTERNAL
+			size = 0 if symtype == 0x02 else None
+			if i != 0 and symbols[-1][2] is not None and symaddr > symbols[-1][1]:
+				symbols[-1][2] = symaddr - symbols[-1][1]
+			symbols.append([name, symaddr, size])
+			addr += 18
 
 	return sections, symbols
 
@@ -98,17 +92,12 @@ def list_all(filename):
 	sections, symbols = parse(filename)
 	if sections:
 		print("Sections:\n    Name         Size\t  Position")
-		cnt = 0
-		for name, size, address in sections:
+		for cnt, (name, size, address) in enumerate(sections):
 			print("%-3d %-8s    %5d\t  0x%.8x" % (cnt, name, size, address))
-			cnt += 1
 	if symbols:
 		print("\nSymbol table:\n   Address     Size    Symbol")
 		for symbol, address, size in symbols:
-			if size is not None:
-				sizestr = "%5d" % size
-			else:
-				sizestr = "     "
+			sizestr = "%5d" % size if size is not None else "     "
 			print("0x%.8x  %s    %-8s" % (address, sizestr, symbol))
 		print()
 
@@ -122,16 +111,15 @@ def extract_symbol(filename, symbol):
 		if symbolname == symbol:
 			if size is None:
 				raise Exception("symbol %s found, but has unknown size")
-			f = open(filename, 'rb')
-			f.seek(address)
-			data = f.read(size)
-			f.close()
+			with open(filename, 'rb') as f:
+				f.seek(address)
+				data = f.read(size)
 			if len(data) != size:
 				raise Exception("short file")
 			break
 
 	if data is None:
-		raise Exception("symbol %s not found" % symbol)
+		raise Exception(f"symbol {symbol} not found")
 
 	return data
 
@@ -178,6 +166,6 @@ if __name__ == '__main__':
 		else:
 			raise Exception("specify -l or -x")
 	except Exception as e:
-		print("Error: %s" % str(e))
+		print(f"Error: {str(e)}")
 
 

@@ -24,43 +24,43 @@ import parseelf
 
 class searcher:
 
-    def reset(this, offs=0):
-        if offs < 0 or offs > this.length:
+    def reset(self, offs=0):
+        if offs < 0 or offs > self.length:
             raise Exception('Reset past end of section')
-        this.address = this.baseaddr + offs
-        this.offset = offs
+        self.address = self.baseaddr + offs
+        self.offset = offs
 
-    def skip(this, cnt):
-        if this.offset + cnt > this.length:
+    def skip(self, cnt):
+        if self.offset + cnt > self.length:
             raise Exception('Skip past end of section')
-        this.address += cnt
-        this.offset += cnt
+        self.address += cnt
+        self.offset += cnt
 
-    def peek(this, cnt, offs=0):
-        if this.offset + offs + cnt > this.length:
+    def peek(self, cnt, offs=0):
+        if self.offset + offs + cnt > self.length:
             raise Exception('Peek past end of section')
-        return this.data[this.offset + offs : this.offset + offs + cnt]
+        return self.data[self.offset + offs:self.offset + offs + cnt]
 
-    def look_for(this, needle):
-        pos = this.data.find(needle, this.offset)
+    def look_for(self, needle):
+        pos = self.data.find(needle, self.offset)
         if pos < 0:
             raise Exception('Needle not found in haystack')
-        this.skip(pos - this.offset)
+        self.skip(pos - self.offset)
 
-    def look_for_either(this, needle1, needle2):
-        pos1 = this.data.find(needle1, this.offset)
-        pos2 = this.data.find(needle2, this.offset)
+    def look_for_either(self, needle1, needle2):
+        pos1 = self.data.find(needle1, self.offset)
+        pos2 = self.data.find(needle2, self.offset)
         if pos1 < 0 and pos2 < 0:
             raise Exception('Needle not found in haystack')
         if pos1 < 0 or pos2 < pos1:
             pos1 = pos2
-        this.skip(pos1 - this.offset)
+        self.skip(pos1 - self.offset)
 
-    def __init__(this, data, addr):
-        this.data = data
-        this.baseaddr = addr
-        this.length = len(data)
-        this.reset()
+    def __init__(self, data, addr):
+        self.data = data
+        self.baseaddr = addr
+        self.length = len(data)
+        self.reset()
 
 def search_plt_32(plt, addr):
     plt.reset()
@@ -110,13 +110,12 @@ def parse_hex_file_lines_constructor_32(text, basic_string_plt, got_plt, lines):
             text.skip(2)
         if text.peek(4) == b'\x89\x44\x24\x08':	# mov %eax,0x8(%esp)
             text.skip(4)
-        if text.peek(2) == b'\x8d\x83':		# lea offs32(%ebx),%eax
-            straddr = struct.unpack('<i', text.peek(4, 2))[0]
-            text.skip(6)
-            straddr += got_plt
-        else:
+        if text.peek(2) != b'\x8d\x83':
             raise Exception('Expected lea offs32(%ebx),%eax @ ' +
                             ('0x%x' % text.address))
+        straddr = struct.unpack('<i', text.peek(4, 2))[0]
+        text.skip(6)
+        straddr += got_plt
         if text.peek(4) == b'\x89\x44\x24\x04':	# mov %eax,0x4(%esp)
             text.skip(4)
         if text.peek(3) == (b'\x89\x34\x24' if esi else b'\x89\x3c\x24'):	# mov %edi,(%esp)
@@ -138,13 +137,12 @@ def parse_hex_file_lines_constructor_32(text, basic_string_plt, got_plt, lines):
             raise Exception('Line %d filled multiple times' % index)
         if text.peek(3) == b'\x89\x04\x24':	# mov %eax,(%esp)
             text.skip(3)
-        if text.peek(1) == b'\xe8':		# call offs32
-            offs = struct.unpack('<i', text.peek(4, 1))[0]
-            text.skip(5)
-            if text.address + offs != basic_string_plt:
-                raise Exception('Expected call ZNSsC1EPKcRKSaIcE@plt @ ' +
-                                ('0x%x' % text.address))
-        else:
+        if text.peek(1) != b'\xe8':
+            raise Exception('Expected call ZNSsC1EPKcRKSaIcE@plt @ ' +
+                            ('0x%x' % text.address))
+        offs = struct.unpack('<i', text.peek(4, 1))[0]
+        text.skip(5)
+        if text.address + offs != basic_string_plt:
             raise Exception('Expected call ZNSsC1EPKcRKSaIcE@plt @ ' +
                             ('0x%x' % text.address))
         if straddr == 0:
@@ -163,13 +161,12 @@ def parse_hex_file_lines_constructor_64(text, basic_string_plt, lines):
             text.skip(5)
         elif text.peek(4) == b'\x48\x8d\x94\x24': # lea offs32(%rsp),%rdx
             text.skip(8)
-        if text.peek(3) == b'\x48\x8d\x35':	# lea offs32(%rip),%rsi
-            straddr = struct.unpack('<i', text.peek(4, 3))[0]
-            text.skip(7)
-            straddr += text.address
-        else:
+        if text.peek(3) != b'\x48\x8d\x35':
             raise Exception('Expected lea offs(%rip),%rsi @ ' +
                             ('0x%x' % text.address))
+        straddr = struct.unpack('<i', text.peek(4, 3))[0]
+        text.skip(7)
+        straddr += text.address
         if text.peek(3) == b'\x48\x89\xef':	# mov %rbp,%rdi
             offs = 0
             text.skip(3)
@@ -191,13 +188,12 @@ def parse_hex_file_lines_constructor_64(text, basic_string_plt, lines):
         index = offs >> 3
         if lines[index] != 0:
             raise Exception('Line %d filled multiple times' % index)
-        if text.peek(1) == b'\xe8':		# callq offs32
-            offs = struct.unpack('<i', text.peek(4, 1))[0]
-            text.skip(5)
-            if text.address + offs != basic_string_plt:
-                raise Exception('Expected callq ZNSsC1EPKcRKSaIcE@plt @ ' +
-                                ('0x%x' % text.address))
-        else:
+        if text.peek(1) != b'\xe8':
+            raise Exception('Expected callq ZNSsC1EPKcRKSaIcE@plt @ ' +
+                            ('0x%x' % text.address))
+        offs = struct.unpack('<i', text.peek(4, 1))[0]
+        text.skip(5)
+        if text.address + offs != basic_string_plt:
             raise Exception('Expected callq ZNSsC1EPKcRKSaIcE@plt @ ' +
                             ('0x%x' % text.address))
         if straddr == 0:
@@ -212,7 +208,7 @@ def find_reloc(elf, symname):
             for reloc in relocs['relocs']:
                 if reloc['r_sym'] == symnum:
                     return reloc
-    raise Exception('Unable to find a relocation against ' + symname)
+    raise Exception(f'Unable to find a relocation against {symname}')
 
 def ihex_to_binary(lines):
     chunks = {}
@@ -243,7 +239,7 @@ def ihex_to_binary(lines):
     return blob
 
 def extract_fx2_firmware(elf, symname, filename):
-    blob = elf.load_symbol(elf.dynsym[symname + 'Count'])
+    blob = elf.load_symbol(elf.dynsym[f'{symname}Count'])
     count = struct.unpack('<I', blob)[0]
     got_plt = elf.find_section('.got.plt')['sh_addr']
     hex_file_lines_got = find_reloc(elf, symname)['r_offset']
@@ -267,7 +263,7 @@ def extract_fx2_firmware(elf, symname, filename):
                 find_hex_file_lines_constructor_32(text, hex_file_lines_got,
                                                    got_plt)
         except:
-            raise Exception('Unable to find constructor for ' + symname)
+            raise Exception(f'Unable to find constructor for {symname}')
         oldoffs = text.offset
         l = [0]*count
         try:
@@ -289,21 +285,22 @@ def extract_fx2_firmware(elf, symname, filename):
             raise Exception('Address 0x%x outside of .rodata section' % addr)
         l[i] = elf.get_name(addr - lo, rodata)
     blob = ihex_to_binary(l)
-    f = open(filename, 'wb')
-    f.write(blob)
-    f.close()
+    with open(filename, 'wb') as f:
+        f.write(blob)
     print("saved %d bytes to %s" % (len(blob), filename))
 
 def extract_symbol(elf, symname, filename):
     blob = elf.load_symbol(elf.dynsym[symname])
-    f = open(filename, 'wb')
-    f.write(blob)
-    f.close()
+    with open(filename, 'wb') as f:
+        f.write(blob)
     print("saved %d bytes to %s" % (len(blob), filename))
 
 def extract_bitstream(elf, lv):
-    extract_symbol(elf, 'gLogic16Lv' + lv + 'CompressedBitstream',
-                   'saleae-logic16-fpga-' + lv + '.bitstream')
+    extract_symbol(
+        elf,
+        f'gLogic16Lv{lv}CompressedBitstream',
+        f'saleae-logic16-fpga-{lv}.bitstream',
+    )
 
 def usage():
     print("sigrok-fwextract-saleae-logic16 <programfile>")
@@ -320,10 +317,10 @@ if len(sys.argv) != 2:
 try:
     filename = sys.argv[1]
     elf = parseelf.elf(filename)
-    if elf.ehdr['e_machine'] != 3 and elf.ehdr['e_machine'] != 62:
+    if elf.ehdr['e_machine'] not in [3, 62]:
         raise Exception('Unsupported e_machine')
     extract_fx2_firmware(elf, 'gLogic16HexFileLines', 'saleae-logic16-fx2.fw')
     extract_bitstream(elf, '18')
     extract_bitstream(elf, '33')
 except Exception as e:
-    print("Error: %s" % str(e))
+    print(f"Error: {str(e)}")

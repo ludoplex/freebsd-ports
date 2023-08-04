@@ -6,7 +6,7 @@ import sys
 import re
 
 if len(sys.argv) != 2:
-    print("Usage: %s vuln.xml" % (sys.argv[0]))
+    print(f"Usage: {sys.argv[0]} vuln.xml")
     sys.exit(1)
 
 re_date = re.compile(r'^(19|20)[0-9]{2}-[0-9]{2}-[0-9]{2}$')
@@ -32,7 +32,7 @@ all_vids = set()
 for vuln in root:
     vid = vuln.get("vid")
 
-    cancelled = False if vuln.find(namespace+"cancelled") is None else True
+    cancelled = vuln.find(f"{namespace}cancelled") is not None
     if cancelled:
         continue
 
@@ -42,27 +42,24 @@ for vuln in root:
     all_vids.add(vid)
 
     # Validate References
-    references = vuln.find(namespace+"references")
+    references = vuln.find(f"{namespace}references")
     if references is None:
         print("Error: references is None : {0}".format(vid))
         ret = 1
     else:
         prev = references[0]
         for reference in references:
-            if reference.tag < prev.tag:
-                #print("Warn: tags out of order ({1} and {2}): {0}".format(vid, prev.tag[len(namespace):], reference.tag[len(namespace):]))
-                pass
             prev = reference
 
     # Validate Dates
-    dates = vuln.find(namespace+"dates")
+    dates = vuln.find(f"{namespace}dates")
     if dates is None:
         print("Error: no date : {0}".format(vid))
         ret = 1
     else:
-        discovery = dates.find(namespace+"discovery")
-        entry = dates.find(namespace+"entry")
-        modified = dates.find(namespace+"modified")
+        discovery = dates.find(f"{namespace}discovery")
+        entry = dates.find(f"{namespace}entry")
+        modified = dates.find(f"{namespace}modified")
         if discovery is None:
             print("Error: discovery is None : {0}".format(vid))
             ret = 1
@@ -83,21 +80,21 @@ for vuln in root:
                 print("Warning: dates must be in YYYY-MM-DD format: {0}".format(d))
 
         # Check description lengths
-        description = vuln.find(namespace + "description")
+        description = vuln.find(f"{namespace}description")
         description_len = len(ET.tostring(description))
         if description_len > DESCRIPTION_LENGTH:
             print("Warning: description too long ({0} chars, {1} is warning threshold): {2})" \
                   .format(description_len, DESCRIPTION_LENGTH, vid))
 
         # Walk and validate package names
-        affects = vuln.find(namespace + "affects")
-        packages = affects.findall(namespace + "package")
+        affects = vuln.find(f"{namespace}affects")
+        packages = affects.findall(f"{namespace}package")
         for package in packages:
-            names = package.findall(namespace + "name")
+            names = package.findall(f"{namespace}name")
 
             for name in names:
                 if (re_invalid_package_name.search(name.text) is not None):
-                    print("Error: invalid package name: " + name.text + " for VID " + format(vid))
+                    print(f"Error: invalid package name: {name.text} for VID {format(vid)}")
                     ret = 1
 
 sys.exit(ret)

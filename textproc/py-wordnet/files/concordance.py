@@ -17,7 +17,7 @@ ss_type = ("NOUN", "VERB", "ADJECTIVE", "ADVERB", "ADJECTIVE SATELLITE")
 # given a sentence number (and the contents of a semantic concordance file)
 # return a string of words as the sentence
 def find_sentence(snum, msg):
-  str = "<s snum=%s>" % snum
+  str = f"<s snum={snum}>"
   s = string.find(msg, str)
   if s < 0:
     return "<Unknown>"
@@ -32,14 +32,14 @@ def find_sentence(snum, msg):
       break
     if n - s != 0:
       if tag == "w" and msg[s] != "'" and len(sentence) > 0: # word form
-        sentence = sentence + " "
+        sentence = f"{sentence} "
       sentence = sentence + msg[s:n]
     e = string.find(msg, '>', n)
     if e < 0:
       break
     tag = msg[n+1]
-    if tag == "/": #check for ending sentence
-      if msg[n+2] == 's':
+    if msg[n+2] == 's':
+      if tag == "/":
         #end of sentence
         break
     s = e + 1
@@ -55,7 +55,7 @@ def tagsentence(tag, root):
   sentence = []
   type = tag[s+1]
   c = s
-  for i in range(0,4):
+  for _ in range(0,4):
     c = string.find(tag, ':', c + 1)
   c = string.find(tag, ' ', c + 1)
   sense = tag[c+1]
@@ -70,10 +70,8 @@ def tagsentence(tag, root):
 
     e = string.find(loclist, ':')
     filename = loclist[:e]
-    fh = open(root + filename, "rb")
-    msg = fh.read()
-    fh.close()
-
+    with open(root + filename, "rb") as fh:
+      msg = fh.read()
     while 1:
       e = e + 1
       f = string.find(loclist, ';', e)
@@ -100,16 +98,16 @@ def tagsentence(tag, root):
 # This could be changed to display in different ways!
 def sentences(word, root):
   cache = {}
-  file = open(root + "taglist", "rb")
-  key = word + "%"
+  file = open(f"{root}taglist", "rb")
+  key = f"{word}%"
   keylen = len(key)
-  binarySearchFile(file, key + " ", cache, 10)
-  print("Word '%s'" % word)
+  binarySearchFile(file, f"{key} ", cache, 10)
+  print(f"Word '{word}'")
   while 1:
     line = file.readline()
     if line[:keylen] != key:
       break
-    type, sense, sentence = tagsentence(line, root + "tagfiles/")
+    type, sense, sentence = tagsentence(line, f"{root}tagfiles/")
     print(ss_type[string.atoi(type) - 1], sense)
     for sent in sentence:
       print(sent)

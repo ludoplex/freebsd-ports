@@ -108,13 +108,8 @@ class PyCompleter:
 
         try:
             if state == 0:
-                if "." in text:
-                    matches = self.attr_matches(text)
-                else:
-                    matches = self.global_matches(text)
-                # remove duplicates and sort
-                matches = list(set(matches))
-                matches.sort()
+                matches = self.attr_matches(text) if "." in text else self.global_matches(text)
+                matches = sorted(set(matches))
                 self.matches = matches
             return self.matches[state]
         except (AttributeError, IndexError, NameError):
@@ -132,9 +127,11 @@ class PyCompleter:
         for list in [keyword.kwlist,
                      __builtin__.__dict__,
                      self.namespace]:
-            for word in list:
-                if word[:n] == text and word != "__builtins__":
-                    matches.append(word)
+            matches.extend(
+                word
+                for word in list
+                if word[:n] == text and word != "__builtins__"
+            )
         return matches
 
     def attr_matches(self, text):
@@ -157,13 +154,13 @@ class PyCompleter:
         words = dir(object)
         if hasattr(object,'__class__'):
             words.append('__class__')
-            words = words + get_class_members(object.__class__)
-        matches = []
+            words += get_class_members(object.__class__)
         n = len(attr)
-        for word in words:
-            if word[:n] == attr and word != "__builtins__":
-                matches.append("%s.%s" % (expr, word))
-        return matches
+        return [
+            f"{expr}.{word}"
+            for word in words
+            if word[:n] == attr and word != "__builtins__"
+        ]
 
 def get_class_members(klass):
     ret = dir(klass)

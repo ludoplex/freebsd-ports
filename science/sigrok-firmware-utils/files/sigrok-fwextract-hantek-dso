@@ -29,9 +29,8 @@ import parsepe
 
 def find_model(filename):
 	filename = os.path.split(filename)[-1]
-	m = re.search('^dso([a-z0-9]+)1.sys$', filename, re.I)
-	if m:
-		model = m.group(1).upper()
+	if m := re.search('^dso([a-z0-9]+)1.sys$', filename, re.I):
+		model = m[1].upper()
 		model = model.replace('X86', '').replace('AMD64', '').replace('IA64', '')
 		if model == '520A':
 			model = '5200A'
@@ -83,8 +82,8 @@ try:
 	if binihx is None:
 		raise Exception("no firmware found")
 	blob = unsparse(binihx)
-	outfile = 'hantek-dso-' + find_model(filename) + '.fw'
+	outfile = f'hantek-dso-{find_model(filename)}.fw'
 	open(outfile, 'wb').write(blob)
 	print("saved %d bytes to %s" % (len(blob), outfile))
 except Exception as e:
-	print("Error: %s" % str(e))
+	print(f"Error: {str(e)}")

@@ -136,10 +136,7 @@ class JLineCompleter(jline.Completor):
                 self.matches = self.global_matches(text)
             for m in self.matches:
                 candidates.add(m)
-            if self.matches:
-                return start
-            else:
-                return -1
+            return start if self.matches else -1
         except (AttributeError, IndexError, NameError):
             return -1
 
@@ -155,9 +152,11 @@ class JLineCompleter(jline.Completor):
         for list in [keyword.kwlist,
                      __builtin__.__dict__,
                      self.namespace]:
-            for word in list:
-                if word[:n] == text and word != "__builtins__":
-                    matches.append(word)
+            matches.extend(
+                word
+                for word in list
+                if word[:n] == text and word != "__builtins__"
+            )
         return matches
 
     def attr_matches(self, text):
@@ -180,13 +179,13 @@ class JLineCompleter(jline.Completor):
         words = dir(object)
         if hasattr(object,'__class__'):
             words.append('__class__')
-            words = words + get_class_members(object.__class__)
-        matches = []
+            words += get_class_members(object.__class__)
         n = len(attr)
-        for word in words:
-            if word[:n] == attr and word != "__builtins__":
-                matches.append("%s.%s" % (expr, word))
-        return matches
+        return [
+            f"{expr}.{word}"
+            for word in words
+            if word[:n] == attr and word != "__builtins__"
+        ]
 
 def get_class_members(klass):
     ret = dir(klass)

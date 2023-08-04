@@ -19,11 +19,13 @@ tkversion = "%%TK_VER%%"
 prefix = sysconfig.PREFIX
 # Python 1.5 doesn't have os.getenv()?
 x11base = os.environ['LOCALBASE'] or '/usr/X11R6'
-inc_dirs = [prefix + "/include",
-            prefix + "/include/tcl" + tkversion,
-            prefix + "/include/tk" + tkversion,
-            x11base + "/include"]
-lib_dirs = [prefix + "/lib", x11base + "/lib"]
+inc_dirs = [
+    f"{prefix}/include",
+    f"{prefix}/include/tcl{tkversion}",
+    f"{prefix}/include/tk{tkversion}",
+    f"{x11base}/include",
+]
+lib_dirs = [f"{prefix}/lib", f"{x11base}/lib"]
 # use string.replace() for the benefit of Python 1.5 users
 libs = ["tcl" + tkversion.replace(".", ""),
         "tk" + tkversion.replace(".", ""),

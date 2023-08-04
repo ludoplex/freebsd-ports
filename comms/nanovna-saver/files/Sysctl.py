@@ -12,7 +12,7 @@ def posix_sysctlbyname(name):
     _mem = create_string_buffer(_len.value)
     result = sysctlbyname(name, _mem, byref(_len), None, 0)
     if result != 0:
-        raise Exception('sysctlbyname returned with error %s' % result)
+        raise Exception(f'sysctlbyname returned with error {result}')
     return _mem.value
 
 def usb_vid_pid(name):

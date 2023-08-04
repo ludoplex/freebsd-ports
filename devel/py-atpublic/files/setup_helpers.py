@@ -52,22 +52,23 @@ def require_python(minimum):
     :param minimum: Minimum Python version supported.
     :type minimum: integer
     """
-    if sys.hexversion < minimum:
-        hversion = hex(minimum)[2:]
-        if len(hversion) % 2 != 0:
-            hversion = '0' + hversion
-        split = list(hversion)
-        parts = []
-        while split:
-            parts.append(int(''.join((split.pop(0), split.pop(0))), 16))
-        major, minor, micro, release = parts
-        if release == 0xf0:
-            print('Python {0}.{1}.{2} or better is required'.format(
-                major, minor, micro))
-        else:
-            print('Python {0}.{1}.{2} ({3}) or better is required'.format(
-                major, minor, micro, hex(release)[2:]))
-        sys.exit(1)
+    if sys.hexversion >= minimum:
+        return
+    hversion = hex(minimum)[2:]
+    if len(hversion) % 2 != 0:
+        hversion = f'0{hversion}'
+    split = list(hversion)
+    parts = []
+    while split:
+        parts.append(int(''.join((split.pop(0), split.pop(0))), 16))
+    major, minor, micro, release = parts
+    if release == 0xf0:
+        print('Python {0}.{1}.{2} or better is required'.format(
+            major, minor, micro))
+    else:
+        print('Python {0}.{1}.{2} ({3}) or better is required'.format(
+            major, minor, micro, hex(release)[2:]))
+    sys.exit(1)
 
 
 def get_version(filename, pattern=None):
@@ -90,10 +91,7 @@ def get_version(filename, pattern=None):
     :return: The version that was extracted.
     :rtype: string
     """
-    if pattern is None:
-        cre = DEFAULT_VERSION_RE
-    else:
-        cre = re.compile(pattern)
+    cre = DEFAULT_VERSION_RE if pattern is None else re.compile(pattern)
     with open(filename) as fp:
         for line in fp:
             if line.startswith('__version__'):
@@ -130,8 +128,7 @@ def long_description(*filenames):
     res = ['']
     for filename in filenames:
         with open(filename) as fp:
-            for line in fp:
-                res.append('   ' + line)
+            res.extend(f'   {line}' for line in fp)
             res.append('')
         res.append('\n')
     return EMPTYSTRING.join(res)
